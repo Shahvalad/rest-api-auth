@@ -1,6 +1,6 @@
 package com.rest_api_auth.controllers;
 
-import com.rest_api_auth.dtos.AuthDto;
+import com.rest_api_auth.models.dtos.AuthDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Value;
