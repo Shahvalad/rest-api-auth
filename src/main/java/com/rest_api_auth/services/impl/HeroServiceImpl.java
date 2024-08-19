@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @Transactional
@@ -26,8 +25,9 @@ public class HeroServiceImpl implements HeroService {
     }
 
     @Override
-    public Optional<Hero> findById(Long id) {
-        return heroRepository.findById(id);
+    public Hero findById(Long id) {
+        return heroRepository.findById(id)
+                .orElseThrow(() -> new HeroNotFoundException("Hero not found with ID: " + id));
     }
 
     @Override

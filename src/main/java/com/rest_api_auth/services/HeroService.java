@@ -7,7 +7,7 @@ import java.util.Optional;
 
 public interface HeroService {
     List<Hero> findAll();
-    Optional<Hero> findById(Long id);
+    Hero findById(Long id);
     Hero save(Hero hero);
     Hero update(Long id, Hero hero);
     void delete(Long id);
