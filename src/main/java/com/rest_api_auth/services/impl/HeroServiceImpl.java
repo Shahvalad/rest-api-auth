@@ -4,10 +4,11 @@ import com.rest_api_auth.exceptions.HeroNotFoundException;
 import com.rest_api_auth.models.entities.Hero;
 import com.rest_api_auth.repositories.HeroRepository;
 import com.rest_api_auth.services.HeroService;
+import jakarta.annotation.Nullable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -50,5 +51,25 @@ public class HeroServiceImpl implements HeroService {
             throw new HeroNotFoundException("Hero not found with id: " + id);
         }
         heroRepository.deleteById(id);
+    }
+
+    @Override
+    public List<Hero> search(@Nullable String name, @Nullable String power, @Nullable String universe) {
+        var heroes = heroRepository.findAll();
+        return heroes.stream()
+                .filter(hero -> (name == null || hero.getName().toLowerCase().contains(name.toLowerCase())) &&
+                                (power == null || hero.getPower().toLowerCase().contains(power.toLowerCase())) &&
+                                (universe == null || hero.getUniverse().toLowerCase().contains(universe.toLowerCase())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Hero updateHeroPartially(Long id, @Nullable String name, @Nullable String power, @Nullable String universe) {
+        var hero = heroRepository.findById(id)
+                .orElseThrow(() -> new HeroNotFoundException("Hero not found with ID: " + id));
+        if (name != null) { hero.setName(name); }
+        if (power != null) { hero.setPower(power); }
+        if (universe != null) { hero.setUniverse(universe); }
+        return heroRepository.save(hero);
     }
 }

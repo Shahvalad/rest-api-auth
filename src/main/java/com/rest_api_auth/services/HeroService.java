@@ -3,7 +3,6 @@ package com.rest_api_auth.services;
 import com.rest_api_auth.models.entities.Hero;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface HeroService {
     List<Hero> findAll();
@@ -11,4 +10,6 @@ public interface HeroService {
     Hero save(Hero hero);
     Hero update(Long id, Hero hero);
     void delete(Long id);
+    List<Hero> search(String name, String power, String universe);
+    Hero updateHeroPartially(Long id, String name, String power, String universe);
 }

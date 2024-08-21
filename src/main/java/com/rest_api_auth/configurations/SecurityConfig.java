@@ -21,9 +21,10 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
         http
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/auth", "/swagger-ui/**", "/v3/api-docs/**"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/api/auth/login","api/auth/register" ,"/swagger-ui/**", "/v3/api-docs/**"))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth").permitAll()
+                        .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers("/api/auth/register").permitAll()
                         .requestMatchers("/api/status").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
