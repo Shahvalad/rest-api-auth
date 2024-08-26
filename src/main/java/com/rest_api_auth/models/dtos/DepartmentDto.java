@@ -7,23 +7,23 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Builder
+import java.util.List;
+
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class HeroDto {
+public class DepartmentDto {
 
     @NotNull(message = "Name is required")
     @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
     private String name;
 
-    @Size(max = 100, message = "Power name must be less than 100 characters")
-    private String power;
+    @Size(max = 100, message = "Description must be less than 100 characters")
+    private String description;
 
-    @Size(max = 100, message = "Universe name must be less than 100 characters")
-    private String universe;
+    @Size(max = 100, message = "Location must be less than 100 characters")
+    private String location;
 
-    @NotNull(message = "Department ID is required")
-    private Long departmentId;
-
+    private List<HeroDto> heroes;
 }

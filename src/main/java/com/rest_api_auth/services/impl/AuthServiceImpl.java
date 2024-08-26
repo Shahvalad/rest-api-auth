@@ -1,18 +1,20 @@
 package com.rest_api_auth.services.impl;
 
 import com.rest_api_auth.models.dtos.AuthDto;
-import com.rest_api_auth.models.dtos.KeycloakUserDto;
 import com.rest_api_auth.models.dtos.UserRegistrationDto;
 import com.rest_api_auth.services.AuthService;
-import org.json.JSONObject;
+import org.keycloak.admin.client.Keycloak;
+import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.RoleRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import javax.ws.rs.core.Response;
 import java.util.Collections;
-import java.util.List;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -20,17 +22,8 @@ public class AuthServiceImpl implements AuthService {
     @Value("${keycloak.admin.client-id}")
     private String clientId;
 
-    @Value("${keycloak.admin.username}")
-    private String adminUsername;
-
-    @Value("${keycloak.admin.password}")
-    private String adminPassword;
-
     @Value("${keycloak.urls.token}")
     private String tokenUrl;
-
-    @Value("${keycloak.urls.register}")
-    private String registerUrl;
 
     @Value("${keycloak.urls.auth-server}")
     private String authServerUrl;
@@ -39,102 +32,93 @@ public class AuthServiceImpl implements AuthService {
     private String grantType;
 
     private final RestTemplate restTemplate;
+    private final Keycloak keycloak;
+    private final String realm;
 
     @Autowired
-    public AuthServiceImpl(RestTemplate restTemplate) {
+    public AuthServiceImpl(RestTemplate restTemplate, Keycloak keycloak, @Value("${keycloak.admin.realm}") String realm) {
         this.restTemplate = restTemplate;
+        this.keycloak = keycloak;
+        this.realm = realm;
     }
 
+    @Override
     public ResponseEntity<String> login(AuthDto authDto) {
+        try {
+            String responseBody = requestToken(authDto);
+            return ResponseEntity.ok(responseBody);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+        }
+    }
+
+    @Override
+    public ResponseEntity<String> register(UserRegistrationDto userRegistrationDto) {
+        Response response = createUser(userRegistrationDto);
+        if (response.getStatus() == Response.Status.CREATED.getStatusCode()) {
+            String userId = getUserId(userRegistrationDto.getUsername());
+            assignRoleToUser(userId, "MYUSER");
+            return ResponseEntity.ok("User registered successfully with role MYUSER");
+        } else {
+            return ResponseEntity.status(response.getStatus()).body("Error registering user: " + response.getStatusInfo());
+        }
+    }
+
+    private String requestToken(AuthDto authDto) {
+        HttpHeaders headers = createFormUrlEncodedHeaders();
+        String body = buildTokenRequestBody(authDto);
+        HttpEntity<String> requestEntity = new HttpEntity<>(body, headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                authServerUrl + tokenUrl,
+                HttpMethod.POST,
+                requestEntity,
+                String.class
+        );
+        return response.getBody();
+    }
+
+    private HttpHeaders createFormUrlEncodedHeaders() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        String body = "client_id=" + clientId + "&" +
+        return headers;
+    }
+
+    private String buildTokenRequestBody(AuthDto authDto) {
+        return "client_id=" + clientId + "&" +
                 "username=" + authDto.login() + "&" +
                 "password=" + authDto.password() + "&" +
                 "grant_type=" + grantType;
-
-        HttpEntity<String> requestEntity = new HttpEntity<>(body, headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    authServerUrl + tokenUrl,
-                    HttpMethod.POST,
-                    requestEntity,
-                    String.class
-            );
-            return ResponseEntity.ok(response.getBody());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Error: Wrong credentials");
-        }
     }
 
-    public ResponseEntity<String> register(UserRegistrationDto userRegistrationDto) {
-        String token = getAdminToken();
+    private Response createUser(UserRegistrationDto userRegistrationDto) {
+        UserRepresentation user = buildUserRepresentation(userRegistrationDto);
+        return keycloak.realm(realm).users().create(user);
+    }
 
-        KeycloakUserDto keycloakUserDto = new KeycloakUserDto();
-        keycloakUserDto.setUsername(userRegistrationDto.getUsername());
-        keycloakUserDto.setEmail(userRegistrationDto.getEmail());
-        keycloakUserDto.setFirstName(userRegistrationDto.getFirstName());
-        keycloakUserDto.setLastName(userRegistrationDto.getLastName());
-        keycloakUserDto.setEnabled(true);
+    private UserRepresentation buildUserRepresentation(UserRegistrationDto userRegistrationDto) {
+        UserRepresentation user = new UserRepresentation();
+        user.setUsername(userRegistrationDto.getUsername());
+        user.setEmail(userRegistrationDto.getEmail());
+        user.setFirstName(userRegistrationDto.getFirstName());
+        user.setLastName(userRegistrationDto.getLastName());
+        user.setEnabled(true);
 
-        KeycloakUserDto.Credential credential = new KeycloakUserDto.Credential();
-        credential.setType("password");
-        credential.setValue(userRegistrationDto.getPassword());
+        CredentialRepresentation credential = new CredentialRepresentation();
         credential.setTemporary(false);
+        credential.setType(CredentialRepresentation.PASSWORD);
+        credential.setValue(userRegistrationDto.getPassword());
+        user.setCredentials(Collections.singletonList(credential));
 
-        keycloakUserDto.setCredentials(List.of(credential));
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
-        headers.setBearerAuth(token);
-
-        HttpEntity<KeycloakUserDto> request = new HttpEntity<>(keycloakUserDto, headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    authServerUrl + registerUrl,
-                    HttpMethod.POST,
-                    request,
-                    String.class
-            );
-            if (response.getStatusCode() == HttpStatus.CREATED) {
-                return ResponseEntity.ok("User registered successfully");
-            } else {
-                return ResponseEntity.status(response.getStatusCode()).body("Error registering user: " + response.getBody());
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
-        }
+        return user;
     }
 
-    private String getAdminToken() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+    private String getUserId(String username) {
+        return keycloak.realm(realm).users().search(username).get(0).getId();
+    }
 
-        String body = "client_id=" + clientId + "&" +
-                "username=" + adminUsername + "&" +
-                "password=" + adminPassword + "&" +
-                "grant_type=password";
-
-        HttpEntity<String> request = new HttpEntity<>(body, headers);
-
-        try {
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    authServerUrl + tokenUrl,
-                    request,
-                    String.class
-            );
-
-            if (response.getStatusCode() == HttpStatus.OK) {
-                JSONObject json = new JSONObject(response.getBody());
-                return json.getString("access_token");
-            } else {
-                throw new RuntimeException("Failed to obtain access token. Status code: " + response.getStatusCode());
-            }
-        } catch (Exception e) {
-            throw new RuntimeException("Exception while obtaining access token: " + e.getMessage(), e);
-        }
+    private void assignRoleToUser(String userId, String roleName) {
+        RoleRepresentation role = keycloak.realm(realm).roles().get(roleName).toRepresentation();
+        keycloak.realm(realm).users().get(userId).roles().realmLevel().add(Collections.singletonList(role));
     }
 }

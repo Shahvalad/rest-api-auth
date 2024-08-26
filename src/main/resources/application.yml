@@ -28,8 +28,8 @@ server:
 
 keycloak:
   admin:
-    username: myuser
-    password: myuser
+    username: myadmin
+    password: Asdfg456!
     client-id: my-client
     realm: myrealm
     grant-type: password

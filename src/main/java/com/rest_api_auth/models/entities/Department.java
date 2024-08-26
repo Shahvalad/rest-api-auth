@@ -2,23 +2,26 @@ package com.rest_api_auth.models.entities;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Data
+import java.util.List;
+
 @Entity
+@Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "heroes")
-public class Hero {
+@Table(name = "departments")
+public class Department {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
-    private String power;
-    private String universe;
+    private String description;
+    private String location;
 
-    @ManyToOne
-    @JoinColumn(name = "department_id")
-    private Department department;
+    @OneToMany(mappedBy = "department")
+    private List<Hero> heroes;
 }
