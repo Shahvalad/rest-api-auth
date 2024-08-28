@@ -13,17 +13,11 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DepartmentDto {
+public class GetDepartmentDto {
 
-    @NotNull(message = "Name is required")
-    @Size(min = 2, max = 100, message = "Name must be between 2 and 100 characters")
     private String name;
-
-    @Size(max = 100, message = "Description must be less than 100 characters")
     private String description;
-
-    @Size(max = 100, message = "Location must be less than 100 characters")
     private String location;
-
     private List<HeroDto> heroes;
+
 }
