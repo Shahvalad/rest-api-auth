@@ -9,6 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
+
+import java.nio.charset.StandardCharsets;
 
 @Service
 @Transactional
@@ -72,4 +76,17 @@ public class HeroServiceImpl implements HeroService {
         if (universe != null) { hero.setUniverse(universe); }
         return heroRepository.save(hero);
     }
+
+    @Override
+    public Resource exportHeroesToCsv() {
+        var heroes = heroRepository.findAll();
+        var csv = new StringBuilder();
+        csv.append("Name,Power,Universe\n");
+        heroes.forEach(hero -> csv.append(hero.getName()).append(",")
+                .append(hero.getPower()).append(",")
+                .append(hero.getUniverse()).append("\n"));
+        return new ByteArrayResource(csv.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+
 }

@@ -1,6 +1,7 @@
 package com.rest_api_auth.services;
 
 import com.rest_api_auth.models.entities.Hero;
+import org.springframework.core.io.Resource;
 
 import java.util.List;
 
@@ -12,4 +13,5 @@ public interface HeroService {
     void delete(Long id);
     List<Hero> search(String name, String power, String universe);
     Hero updateHeroPartially(Long id, String name, String power, String universe);
+    Resource exportHeroesToCsv();
 }

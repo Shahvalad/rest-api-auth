@@ -14,7 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import java.util.List;
 
 @RestController
@@ -153,6 +155,22 @@ public class HeroesController {
             @RequestBody HeroDto heroDto) {
         heroService.updateHeroPartially(id, heroDto.getName(), heroDto.getPower(), heroDto.getUniverse());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/export")
+    @PreAuthorize("hasRole('MYADMIN')")
+    @Operation(summary = "Export heroes to CSV", description = "Export a list of heroes to CSV format")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Successfully exported heroes"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized - Access token is missing or invalid"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - Insufficient privileges")
+    })
+    public ResponseEntity<Resource> exportHeroes() {
+        Resource file = heroService.exportHeroesToCsv();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=heroes.csv")
+                .contentType(MediaType.parseMediaType("text/csv"))
+                .body(file);
     }
 }
 
